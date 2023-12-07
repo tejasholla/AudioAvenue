@@ -575,7 +575,6 @@ def check_for_updates(retry_count=1, retry_delay=2):
             if attempts < retry_count - 1:
                 time.sleep(retry_delay)
         except Exception as e:
-            print(f"Unexpected error while checking for updates: {e}")
             break
         finally:
             attempts += 1
@@ -632,7 +631,7 @@ def main():
         #download_dir = args.directory if args.directory else get_default_directory('download')
         download_dir = preferences['download_directory']
 
-        print("\nYouTube Downloader [" + CURRENT_VERSION + "]")
+        print("\033[91mYouTube Downloader [" + CURRENT_VERSION + "]\033[0m")
 
         while True:  # Continuous loop until exit is chosen
             questions = [
