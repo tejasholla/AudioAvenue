@@ -17,7 +17,6 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import threading
-import re
 
 CURRENT_VERSION = "1.0.6"
 
@@ -83,34 +82,12 @@ def display_analytics():
     print(f"Audio Downloads: {data['audio_downloads']}\n")
 
 # Function to fetch metadata (placeholder function)
-def fetch_metadata(title, description):
-    # Regular expression for parsing the title
-    match = re.search(r'(?P<artist>.+?)\s*-\s*(?P<title>.+)', title)
-    if match:
-        artist = match.group('artist').strip()
-        song_title = match.group('title').strip()
-    else:
-        artist = "Unknown Artist"
-        song_title = "Unknown Title"
-
-    # Initialize default values for album and genre
-    album = "Unknown Album"
-    genre = "Unknown Genre"
-
-    # Check if description is not None and process it
-    if description:
-        lines = description.split("\n")
-        for line in lines:
-            if "album:" in line.lower():
-                album = line.split(":")[1].strip()
-            if "genre:" in line.lower():
-                genre = line.split(":")[1].strip()
-
+def fetch_metadata(title):
+    # Placeholder function to simulate metadata fetching
     return {
-        "artist": artist,
-        "album": album,
-        "title": song_title,
-        "genre": genre
+        "artist": "Unknown Artist",
+        "album": "Unknown Album",
+        "genre": "Unknown Genre"
     }
 
 # Function to tag audio file with metadata
@@ -423,9 +400,7 @@ def download_audio(yt, path, log_dir):
             file_path = correct_file_extension(file_path, "mp3")
 
             # Fetch and tag metadata
-            title = yt.title
-            description = yt.description if yt.description else ""
-            metadata = fetch_metadata(title, description)
+            metadata = fetch_metadata(yt.title)
             tag_audio_file(file_path, metadata)
 
             # Check file integrity
@@ -576,7 +551,6 @@ def check_for_updates(retry_count=1, retry_delay=2):
             if attempts < retry_count - 1:
                 time.sleep(retry_delay)
         except Exception as e:
-            print(f"Unexpected error while checking for updates: {e}")
             break
         finally:
             attempts += 1
@@ -633,7 +607,7 @@ def main():
         #download_dir = args.directory if args.directory else get_default_directory('download')
         download_dir = preferences['download_directory']
 
-        print("\nYouTube Downloader [" + CURRENT_VERSION + "]")
+        print("\033[91mYouTube Downloader [" + CURRENT_VERSION + "]\033[0m")
 
         while True:  # Continuous loop until exit is chosen
             questions = [
