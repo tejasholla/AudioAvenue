@@ -18,6 +18,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import threading
 import re
+from PIL import Image, ImageFont, ImageDraw
 
 CURRENT_VERSION = "1.0.6"
 
@@ -27,6 +28,36 @@ Preferences_file = "user_preferences.json"
 # Constants for retry mechanism
 MAX_RETRIES = 3
 RETRY_DELAY = 5  # seconds
+
+def create_text_image(text, font_path, font_size, image_path):
+    # Create an image with white background
+    image = Image.new('RGB', (800, 200), color = (73, 109, 137))
+
+    # Initialize the drawing context with the image object as background
+    draw = ImageDraw.Draw(image)
+
+    # Load a font
+    font = ImageFont.truetype(font_path, font_size)
+
+    # Position of the text
+    text_width, text_height = draw.textsize(text, font=font)
+    position = ((image.width - text_width) / 2, (image.height - text_height) / 2)
+
+    # Apply text to image
+    draw.text(position, text, font=font, fill="red")
+
+    # Save the image
+    image.save(image_path)
+
+# Path to a font that matches the style in name.png
+font_path = 'path_to_your_font.ttf' # You'll need to find and provide the path to a suitable font
+font_size = 100  # Adjust as necessary to match the style of name.png
+image_path = 'YouTube_Downloader.png'
+
+create_text_image("YouTube Downloader", font_path, font_size, image_path)
+
+# This will open the generated image in the default image viewer
+os.system(f'open {image_path}')
 
 def load_preferences():
     try:
