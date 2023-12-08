@@ -18,8 +18,9 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import threading
 import re
+from musicplayer import initialize_music_player, music_player_main
 
-CURRENT_VERSION = "1.0.6"
+CURRENT_VERSION = "1.0.7"
 
 analytics_file = "download_analytics.json"
 Preferences_file = "user_preferences.json"
@@ -580,6 +581,10 @@ def check_for_updates(retry_count=1, retry_delay=2):
         finally:
             attempts += 1
 
+    # Function to clear the screen
+def clear_screen():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
 def send_feedback_via_email(user_input):
     # Email Configuration
     sender_email = "your_email@gmail.com"  # Replace with your email
@@ -623,7 +628,6 @@ def feedback_and_support():
 # Main function to handle user input and start the download process
 def main():
     try:
-        check_for_updates()
         url = None
         #args = parse_arguments()
         preferences = load_preferences()
@@ -632,13 +636,14 @@ def main():
         #download_dir = args.directory if args.directory else get_default_directory('download')
         download_dir = preferences['download_directory']
 
-        print("\033[91mYouTube Downloader [" + CURRENT_VERSION + "]\033[0m")
-
         while True:  # Continuous loop until exit is chosen
+            clear_screen()
+            check_for_updates()
+            print("\033[91mYouTube Downloader [" + CURRENT_VERSION + "]\033[0m")
             questions = [
                 inquirer.List('choice',
                               message="Please enter your choice",
-                              choices=['Download Video/Audio', 'View Download Analytics', 'Settings', 'Exit'],
+                              choices=['Download Video/Audio', 'View Download Analytics', 'Music Player', 'Settings', 'Exit'],
                               ),
             ]
             answers = inquirer.prompt(questions)
@@ -692,20 +697,26 @@ def main():
                             os.makedirs(audio_path, exist_ok=True)
                             yt = YouTube(url)
                             download_audio(yt, audio_path, log_dir)
-
+                clear_screen()
             elif answers['choice'] == 'View Download Analytics':
                 display_analytics()
-
+                clear_screen()
+            elif answers['choice'] == 'Music Player':
+                music_path = "D:\Media\Music"  # Or dynamically determine this path
+                initialize_music_player()
+                music_player_main(music_path)
+                clear_screen()
             elif answers['choice'] == 'Settings':
                 settings_choice = interactive_prompt("Select a setting to update", ["Update Preferences", "Feedback and Support", "Back to Main Menu"])
                 if settings_choice == 'Update Preferences':
                     update_preferences(preferences)
                 elif settings_choice == 'Feedback and Support':
                     feedback_and_support()
-
+                clear_screen()
             elif answers['choice'] == 'Exit':
                 save_preferences(preferences)
                 print("Exiting YouTube Downloader CLI.")
+                clear_screen()                
                 break  # Exit the loop and the program
 
             else:

@@ -3,8 +3,9 @@ import pygame
 import questionary
 from questionary import Style
 
-# Initialize Pygame's music module
-pygame.mixer.init()
+
+def initialize_music_player():
+    pygame.mixer.init()
 
 # Function to list all music files
 def list_music_files(path):
@@ -27,48 +28,45 @@ def resume_music():
 def stop_music():
     pygame.mixer.music.stop()
 
-# Custom style for questionary
-custom_style = Style([
-    ('pointer', 'fg:red bold'),  # Color for the pointer
-    ('highlighted', 'fg:red bold'),  # Color for highlighted item
-    ('selected', 'fg:orange bg:#673ab7'),  # Color for selected item
-])
+def music_player_main(music_path):
+    custom_style = Style([
+        ('pointer', 'fg:red bold'),  # Color for the pointer
+        ('highlighted', 'fg:red bold'),  # Color for highlighted item
+        ('selected', 'fg:orange bg:#673ab7'),  # Color for selected item
+    ])
+    
+    # Function to clear the screen
+    def clear_screen():
+        os.system('cls' if os.name == 'nt' else 'clear')
 
-# Function to clear the screen
-def clear_screen():
-    os.system('cls' if os.name == 'nt' else 'clear')
+    # Function to print the currently playing song with color
+    def print_currently_playing(song):
+        # ANSI escape code for color
+        print(f"\033[94m\nCurrently Playing: {song}\033[0m")
 
-# Function to print the currently playing song with color
-def print_currently_playing(song):
-    # ANSI escape code for color
-    print(f"\033[94m\nCurrently Playing: {song}\033[0m")
+    # Interactive Menu Options
+    def menu_options(current_song):
+        clear_screen()
+        print_currently_playing(current_song)
+        return questionary.select(
+            "Please enter your choice:",
+            choices=['Choose Song', 'Play/Pause', 'Resume', 'Stop', 'Next Track', 'Previous Track', 'Exit'],
+            style=custom_style
+        ).ask()
 
-# Interactive Menu Options
-def menu_options(current_song):
-    clear_screen()
-    print_currently_playing(current_song)
-    return questionary.select(
-        "Please enter your choice:",
-        choices=['Choose Song', 'Play/Pause', 'Resume', 'Stop', 'Next Track', 'Previous Track', 'Exit'],
-        style=custom_style
-    ).ask()
-
-# Function to choose a song or go back
-def choose_song(tracks, current_track_index):
-    clear_screen()
-    options = ["[Back to Main Menu]"] + tracks
-    selected = questionary.select(
-        "Select a song to play or go back:",
-        choices=options,
-        style=custom_style,
-        pointer='->',
-        default=options[current_track_index + 1]
-    ).ask()
-    return selected, options.index(selected) - 1
-
-# Main interactive loop
-def main():
-    music_path = "D:\Media\Music"
+    # Function to choose a song or go back
+    def choose_song(tracks, current_track_index):
+        clear_screen()
+        options = ["[Back to Main Menu]"] + tracks
+        selected = questionary.select(
+            "Select a song to play or go back:",
+            choices=options,
+            style=custom_style,
+            pointer='->',
+            default=options[current_track_index + 1]
+        ).ask()
+        return selected, options.index(selected) - 1
+    
     tracks = list_music_files(music_path)
 
     if not tracks:
@@ -107,4 +105,7 @@ def main():
     pygame.mixer.quit()
 
 if __name__ == "__main__":
-    main()
+    music_path = "D:\Media\Music"
+    initialize_music_player()
+    music_player_main(music_path)
+
