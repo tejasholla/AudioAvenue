@@ -20,7 +20,7 @@ import threading
 import re
 from musicplayer import initialize_music_player, music_player_main
 
-CURRENT_VERSION = "1.0.7"
+CURRENT_VERSION = "1.0.8"
 
 analytics_file = "download_analytics.json"
 Preferences_file = "user_preferences.json"
