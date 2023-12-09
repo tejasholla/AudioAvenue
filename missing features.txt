@@ -51,3 +51,29 @@ Audio Quality Selection: Similar to video quality, allow users to choose the qua
 API Key Integration: For power users, provide an option to use their own YouTube API key for managing quotas or accessing restricted content.
 
 Accessibility Features: Ensure the tool is accessible, including features like screen reader compatibility for visually impaired users.
+
+# Music
+
+Volume Control: Add functions to increase, decrease, and mute the volume. This would involve using pygame.mixer.music.set_volume() to adjust the volume level.
+
+Shuffle and Repeat: Implement shuffle and repeat modes. Shuffle can randomize the order of the tracks, while repeat can allow a single song or the entire playlist to be played repeatedly.
+
+Playlist Management: Allow users to create, save, and load playlists. This could involve writing and reading to a file that stores the playlist information.
+
+Music Metadata Display: Show additional information about the current track, like artist name, album, year, etc., if this metadata is available in the file.
+
+Graphical User Interface (GUI): While your current script uses a command-line interface, adding a GUI using a library like Tkinter or PyQt can make it more user-friendly and visually appealing.
+
+Visualizations or Album Art: Display visualizations or album art while the song is playing. This could be done using additional Python libraries for image handling.
+
+Equalizer Settings: Implement an equalizer for users to adjust the balance of different frequency components in the audio.
+
+Hotkeys for Control: Enable keyboard shortcuts for play, pause, next, previous, volume up, and volume down, making it easier to control the player without switching to the terminal.
+
+Integration with Online Music Services: If feasible, integrate the ability to stream music from online sources or platforms.
+
+Lyrics Display: Show the lyrics of the current song, either embedded in the audio file or fetched from an online source.
+
+Save Last Played State: When the player is closed and reopened, it could resume from the last played state, including the track and its position.
+
+Drag and Drop to Add Music: In a GUI, allow users to drag and drop files or folders into the player to add them to the current playlist.

@@ -59,18 +59,19 @@ def display_progress(current_song):
     duration = get_song_duration(current_song)
     while pygame.mixer.music.get_busy() and progress_thread_running:
         position = pygame.mixer.music.get_pos() / 1000.0  # Convert to seconds
-        print(f"\033[94m\rProgress: {format_time(position)} / {format_time(duration)}\033[0m", end='')
+        print(f"\rCurrent Progress: {format_time(position)} / {format_time(duration)}", end='')
         time.sleep(1)
 
 def format_time(seconds):
     """
     Format time in seconds to a string in the format 'minutes:seconds'.
     """
-    return time.strftime('%M:%S', time.gmtime(seconds))
+    return f"{int(seconds // 60)}:{int(seconds % 60):02d}"
 
 # Music control functions
 def play_music(new_track):
     global progress_thread_running
+    progress_thread_running = True  # Set the flag to True when starting playback
     try:
         current_track = pygame.mixer.music.get_pos()
         if current_track != -1:  # Check if a track is already playing
@@ -78,7 +79,6 @@ def play_music(new_track):
         else:
             pygame.mixer.music.load(new_track)
             pygame.mixer.music.play()
-            progress_thread_running = True  # Set the flag to True when starting playback
             # Start a new thread to display the progress
             progress_thread = threading.Thread(target=display_progress, args=(new_track,))
             progress_thread.start()
@@ -92,12 +92,9 @@ def resume_music():
     pygame.mixer.music.unpause()
 
 def stop_music():
-    global progress_thread_running
     pygame.mixer.music.stop()
-    progress_thread_running = False
 
 def music_player_main(music_path):
-    global progress_thread_running
     custom_style = Style([
         ('pointer', 'fg:red bold'),  # Color for the pointer
         ('highlighted', 'fg:red bold'),  # Color for highlighted item
@@ -118,7 +115,7 @@ def music_player_main(music_path):
         clear_screen()
         print_currently_playing(current_song)
         return questionary.select(
-            "Plz enter your choice:",
+            "Please enter your choice:",
             choices=['Choose Song', 'Play/Pause', 'Resume', 'Stop', 'Next Track', 'Previous Track', 'Exit'],
             style=custom_style
         ).ask()
@@ -211,11 +208,10 @@ def music_player_main(music_path):
             current_track_index = (current_track_index - 1) % len(tracks)
             play_music(os.path.join(music_path, tracks[current_track_index]))
         elif choice == 'Exit':
-            progress_thread_running = False
-            if pygame.mixer.music.get_busy():
-                pause_music()
-                pygame.mixer.quit()
             break
+
+    progress_thread_running = False
+    pygame.mixer.quit()
 
 if __name__ == "__main__":
     music_path = "D:\Media\Music"
