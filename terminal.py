@@ -6,14 +6,22 @@ import subprocess, sys, os
 import platform
 import shlex
 
-# You can add more words for auto-completion
-linux_commands = ['echo', 'ls', 'cat', 'grep', 'find', 'exit']
+# Adding 'downloadyt' to the list of commands
+linux_commands = ['echo', 'ls', 'cat', 'grep', 'find', 'exit', 'downloadyt']
 command_completer = WordCompleter(linux_commands, ignore_case=True)
+
+def execute_ytDownloader():
+    # Directly executing ytDownloader.py
+    os.system('python ytDownloader.py')
 
 def execute_command(command):
     if platform.system() == "Windows":
-        # Replace 'ls' with 'dir' on Windows
         command = command.replace('ls', 'dir')
+
+    # Check if the command is 'downloadyt'
+    if command.strip().lower() == 'downloadyt':
+        execute_ytDownloader()
+        return
 
     try:
         result = subprocess.run(shlex.split(command), shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -26,7 +34,7 @@ def main():
 
     while True:
         try:
-            command = session.prompt("(MyTerminal) ", complete_while_typing=True)
+            command = session.prompt("(Ghost-Terminal) ", complete_while_typing=True)
             if command.strip().lower() == 'exit':
                 break
             execute_command(command)
