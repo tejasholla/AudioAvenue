@@ -21,7 +21,7 @@ import re
 from musicplayer import initialize_music_player, music_player_main
 from mutagen.id3 import ID3, APIC, error
 
-CURRENT_VERSION = "1.0.8"
+CURRENT_VERSION = "1.0.9"
 
 analytics_file = "download_analytics.json"
 Preferences_file = "user_preferences.json"
