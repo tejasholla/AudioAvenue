@@ -11,6 +11,10 @@ progress_thread_running = False
 def initialize_music_player():
     pygame.mixer.init()
 
+# Function to clear the screen
+def clear_screen():
+    os.system('cls' if os.name == 'nt' else 'clear')
+
 # Function to list all music files
 def list_music_files(path):
     return [f for f in os.listdir(path) if f.endswith('.mp3')]
@@ -57,10 +61,13 @@ def get_song_duration(file_path):
 def display_progress(current_song):
     global progress_thread_running
     duration = get_song_duration(current_song)
-    while pygame.mixer.music.get_busy() and progress_thread_running:
-        position = pygame.mixer.music.get_pos() / 1000.0  # Convert to seconds
-        print(f"\033[94m\rProgress: {format_time(position)} / {format_time(duration)}\033[0m", end='')
-        time.sleep(1)
+    try:
+        while pygame.mixer.music.get_busy() and progress_thread_running:
+            position = pygame.mixer.music.get_pos() / 1000.0  # Convert to seconds
+            print(f"\033[94m\rProgress: {format_time(position)} / {format_time(duration)}\033[0m", end='')
+            time.sleep(1)
+    except Exception as e:
+        print ("")
 
 def format_time(seconds):
     """
@@ -103,10 +110,6 @@ def music_player_main(music_path):
         ('highlighted', 'fg:red bold'),  # Color for highlighted item
         ('selected', 'fg:orange bg:#673ab7'),  # Color for selected item
     ])
-    
-    # Function to clear the screen
-    def clear_screen():
-        os.system('cls' if os.name == 'nt' else 'clear')
 
     # Function to print the currently playing song with color
     def print_currently_playing(song):
@@ -216,7 +219,7 @@ def music_player_main(music_path):
                 pause_music()
                 pygame.mixer.quit()
             break
-
+    clear_screen()
 if __name__ == "__main__":
     music_path = "D:\Media\Music"
     initialize_music_player()
