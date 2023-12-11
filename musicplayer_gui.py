@@ -12,6 +12,8 @@ class MusicPlayerGUI:
         root.geometry("800x600")
 
         standard_font = ("Arial", 10)
+        # Set the transparency of the window
+        root.attributes('-alpha', 0.95)  # Adjust the value as needed, e.g., 0.95 for 95% opacity
 
         # Initialize Pygame mixer
         pygame.mixer.init()
