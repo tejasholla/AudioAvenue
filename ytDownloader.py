@@ -638,8 +638,8 @@ def main():
 
         while True:  # Continuous loop until exit is chosen
             clear_screen()
-            check_for_updates()
             print("\033[91mYouTube Downloader [" + CURRENT_VERSION + "]\033[0m")
+            check_for_updates()
             questions = [
                 inquirer.List('choice',
                               message="Please enter your choice",
