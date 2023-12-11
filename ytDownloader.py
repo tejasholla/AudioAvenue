@@ -718,7 +718,6 @@ def main():
                 print("Exiting YouTube Downloader CLI.")
                 clear_screen()                
                 break  # Exit the loop and the program
-
             else:
                 print("Invalid choice. Please enter a valid option.")
 
