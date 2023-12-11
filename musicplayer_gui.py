@@ -18,7 +18,9 @@ class MusicPlayerGUI:
         # Set the transparency of the window
         root.attributes('-alpha', 0.95)  # Adjust the value as needed, e.g., 0.95 for 95% opacity
         control_buttons_font = ("Arial", 12, "bold")  # Setting the font style to bold
-
+        # Font settings
+        time_label_font = ("Arial", 10, "bold")
+        song_name_font = ("Arial", 12, "bold")
         # Initialize Pygame mixer
         pygame.mixer.init()
 
@@ -53,11 +55,27 @@ class MusicPlayerGUI:
 
         # Song Image Placeholder
         self.song_image_label = tk.Label(self.right_frame, text='Song Image', bg='black', width=20, height=10)
-        self.song_image_label.pack(anchor='center', pady=40)
+        self.song_image_label.pack(anchor='center', pady=35)
 
         # Song Name Label
-        self.song_name_label = tk.Label(self.right_frame, text='Song Name', bg='#2c2c2c', fg='white')
+        self.song_name_label = tk.Label(self.right_frame, text='Song Name', bg='#2c2c2c', fg='white', font=song_name_font)
         self.song_name_label.pack()
+
+        # Frame for Time Labels
+        self.time_labels_frame = tk.Frame(self.right_frame, bg='#2c2c2c')
+        self.time_labels_frame.pack()
+
+        # Current Time Label
+        self.current_time_label = tk.Label(self.time_labels_frame, text='00:00', bg='#2c2c2c', fg='orange', font=time_label_font)
+        self.current_time_label.pack(side=tk.LEFT)
+
+        # Separator Label (Optional, for aesthetic purpose)
+        self.separator_label = tk.Label(self.time_labels_frame, text='/', bg='#2c2c2c', fg='orange', font=time_label_font)
+        self.separator_label.pack(side=tk.LEFT)
+
+        # Track Duration Label
+        self.track_duration_label = tk.Label(self.time_labels_frame, text='00:00', bg='#2c2c2c', fg='orange', font=time_label_font)
+        self.track_duration_label.pack(side=tk.LEFT)
 
         # Control Buttons Frame
         self.controls_frame = tk.Frame(self.right_frame, bg='#2c2c2c')
@@ -97,6 +115,25 @@ class MusicPlayerGUI:
         self.song_image_label.configure(font=standard_font)
         self.song_name_label.configure(font=standard_font)
         # self.song_details_label.configure(font=standard_font)  # Uncomment if you use it
+
+    def update_playback_time(self):
+        if self.is_playing and not self.is_paused:
+            # Get the current playback time
+            current_time = pygame.mixer.music.get_pos() // 1000  # Convert to seconds
+            formatted_time = self.format_time(current_time)
+            self.current_time_label.config(text=formatted_time)
+
+        # Schedule this method to run again after 1 second
+        self.root.after(1000, self.update_playback_time)
+
+    def format_time(self, seconds):
+        return f"{seconds // 60:02d}:{seconds % 60:02d}"
+
+    def check_and_play_next(self):
+        if not pygame.mixer.music.get_busy() and self.is_playing:
+            self.next_track()
+        # Schedule the method to run again after 1000 milliseconds
+        self.root.after(1000, self.check_and_play_next)
 
     def populate_music_list(self):
         """Populate the music list in the listbox."""
@@ -178,6 +215,12 @@ class MusicPlayerGUI:
             self.song_name_label.config(text=track_name_without_extension)
             # Update the selection in the listbox
             self.update_song_selection()
+            
+            # Get and display the track duration
+            audio = MP3(track_path)
+            duration = int(audio.info.length)
+            self.track_duration_label.config(text=self.format_time(duration))
+            
             # Extract and display album art
             album_art = self.extract_album_art(track_path)
             if album_art:
@@ -193,6 +236,12 @@ class MusicPlayerGUI:
                 default_art_photo = ImageTk.PhotoImage(default_art)
                 self.song_image_label.config(image=default_art_photo, width=200, height=200)
                 self.song_image_label.image = default_art_photo  # Keep a reference
+
+            # Start the loop to check for the end of the song
+            self.root.after(1000, self.check_and_play_next)
+
+            # Start updating the playback time
+            self.update_playback_time()
 
         except pygame.error as e:
             messagebox.showerror("Error playing track", f"An error occurred: {e}")
@@ -222,6 +271,8 @@ class MusicPlayerGUI:
         if self.track_list:  # Check if the list is not empty
             self.current_track_index = (self.current_track_index + 1) % len(self.track_list)
             self.play_music(self.current_track_index)
+            self.is_playing = True  # Make sure to set this flag
+
 
     def prev_track(self):
         if self.track_list:  # Check if the list is not empty
