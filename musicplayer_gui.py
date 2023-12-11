@@ -17,6 +17,7 @@ class MusicPlayerGUI:
         standard_font = ("Arial", 10)
         # Set the transparency of the window
         root.attributes('-alpha', 0.95)  # Adjust the value as needed, e.g., 0.95 for 95% opacity
+        control_buttons_font = ("Arial", 12, "bold")  # Setting the font style to bold
 
         # Initialize Pygame mixer
         pygame.mixer.init()
@@ -27,7 +28,7 @@ class MusicPlayerGUI:
         self.music_folder = "D:\\Media\\Music"
         self.is_playing = False
         self.is_paused = False
-
+        self.default_album_art_path = os.path.join(os.path.dirname(__file__), 'album_art.png')
         # Left Frame for Songs List and Load Button
         self.left_frame = tk.Frame(root, bg='#2c2c2c')
         self.left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -63,18 +64,22 @@ class MusicPlayerGUI:
         # Previous Button
         self.prev_button = tk.Button(self.controls_frame, text='  <<  ', command=self.prev_track, bg='#ff8c00', fg='black')
         self.prev_button.pack(side=tk.LEFT, padx=5)
+        self.prev_button.configure(font=control_buttons_font)
 
         # Play/Pause Button
         self.play_pause_button = tk.Button(self.controls_frame, text='  >  ', command=self.toggle_play_pause, bg='#ff8c00', fg='black')
         self.play_pause_button.pack(side=tk.LEFT, padx=5)
+        self.play_pause_button.configure(font=control_buttons_font)
 
         # Stop Button
         self.stop_button = tk.Button(self.controls_frame, text='  O  ', command=self.stop_music, bg='#ff8c00', fg='black')
         self.stop_button.pack(side=tk.LEFT, padx=5)
+        self.stop_button.configure(font=control_buttons_font)
 
         # Next Button
         self.next_button = tk.Button(self.controls_frame, text='  >>  ', command=self.next_track, bg='#ff8c00', fg='black')
         self.next_button.pack(side=tk.LEFT, padx=5)
+        self.next_button.configure(font=control_buttons_font)
 
         # Center the control buttons
         self.controls_frame.pack(anchor='center')
@@ -86,11 +91,6 @@ class MusicPlayerGUI:
         self.song_image_label.configure(font=standard_font)
         self.song_name_label.configure(font=standard_font)
         # self.song_details_label.configure(font=standard_font)  # Uncomment if you use it
-
-        self.prev_button.configure(font=standard_font)
-        self.play_pause_button.configure(font=standard_font)
-        self.stop_button.configure(font=standard_font)
-        self.next_button.configure(font=standard_font)
 
     def extract_album_art(self, track_path):
         try:
@@ -167,8 +167,12 @@ class MusicPlayerGUI:
                 self.song_image_label.config(image=album_art_photo, width=200, height=200)
                 self.song_image_label.image = album_art_photo  # Keep a reference
             else:
-                # Clear the label and show a placeholder text if no album art is found
-                self.song_image_label.config(image='', text='No Album Art')
+                # Display the default album art if no album art is found
+                default_art = Image.open(self.default_album_art_path)
+                default_art = default_art.resize((200, 200), Image.Resampling.LANCZOS)
+                default_art_photo = ImageTk.PhotoImage(default_art)
+                self.song_image_label.config(image=default_art_photo, width=200, height=200)
+                self.song_image_label.image = default_art_photo  # Keep a reference
 
         except pygame.error as e:
             messagebox.showerror("Error playing track", f"An error occurred: {e}")
