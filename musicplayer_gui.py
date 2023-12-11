@@ -29,6 +29,7 @@ class MusicPlayerGUI:
         self.is_playing = False
         self.is_paused = False
         self.default_album_art_path = os.path.join(os.path.dirname(__file__), 'album_art.png')
+
         # Left Frame for Songs List and Load Button
         self.left_frame = tk.Frame(root, bg='#2c2c2c')
         self.left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -40,6 +41,11 @@ class MusicPlayerGUI:
         # Songs Listbox
         self.track_listbox = tk.Listbox(self.left_frame, bg='#2c2c2c', fg='white', selectbackground='orange')
         self.track_listbox.pack(fill=tk.BOTH, expand=True)
+        self.track_listbox.bind("<Double-1>", self.play_selected_song)  # Bind double-click event
+
+        # Automatically load music list if the directory exists
+        if os.path.exists(self.music_folder):
+            self.populate_music_list()
 
         # Right Frame for Song Details
         self.right_frame = tk.Frame(root, bg='#2c2c2c')
@@ -92,6 +98,14 @@ class MusicPlayerGUI:
         self.song_name_label.configure(font=standard_font)
         # self.song_details_label.configure(font=standard_font)  # Uncomment if you use it
 
+    def populate_music_list(self):
+        """Populate the music list in the listbox."""
+        self.track_list = [f for f in os.listdir(self.music_folder) if f.endswith('.mp3')]
+        self.track_listbox.delete(0, tk.END)
+        for track in self.track_list:
+            track_name_without_extension = os.path.splitext(track)[0]
+            self.track_listbox.insert(tk.END, track_name_without_extension)
+
     def extract_album_art(self, track_path):
         try:
             file = MP3(track_path, ID3=ID3)
@@ -125,6 +139,12 @@ class MusicPlayerGUI:
             for track in self.track_list:
                 track_name_without_extension = os.path.splitext(track)[0]
                 self.track_listbox.insert(tk.END, track_name_without_extension)
+
+    def play_selected_song(self, event=None):
+        """Play the selected song from the list."""
+        selected_index = self.track_listbox.curselection()
+        if selected_index:
+            self.play_music(selected_index[0])
 
     def toggle_play_pause(self):
         if not self.track_list:
