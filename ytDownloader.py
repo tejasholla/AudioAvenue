@@ -19,6 +19,7 @@ from email.mime.multipart import MIMEMultipart
 import threading
 import re
 from musicplayer import initialize_music_player, music_player_main
+from mutagen.id3 import ID3, APIC, error
 
 CURRENT_VERSION = "1.0.8"
 
@@ -361,6 +362,9 @@ def download_audio(yt, path, log_dir):
             # Select the best audio stream
             stream = yt.streams.filter(only_audio=True, file_extension='mp3').order_by('abr').desc().first()
 
+            # Get the thumbnail URL
+            thumbnail_url = yt.thumbnail_url
+
             # Sanitize and set up file path
             sanitized_title = sanitize_filename(yt.title)
             final_filename = f"{sanitized_title}.mp3"
@@ -419,6 +423,35 @@ def download_audio(yt, path, log_dir):
                 stream.download(output_path=path, filename=final_filename)
                 tqdm_instance.close()
                 print(f"\nDownloaded {final_filename} to {path}")
+                
+            # Download thumbnail (album art)
+            album_art_path = os.path.join(path, f"{sanitized_title}.jpg")
+            response = requests.get(thumbnail_url, stream=True)
+            if response.status_code == 200:
+                with open(album_art_path, 'wb') as file:
+                    shutil.copyfileobj(response.raw, file)
+
+            # Tagging MP3 file with metadata and album art
+            audiofile = MP3(file_path, ID3=ID3)
+            try:
+                audiofile.add_tags()
+            except error:
+                pass  # An ID3 tag already exists
+
+            if os.path.exists(album_art_path):
+                with open(album_art_path, 'rb') as album_art_file:
+                    audiofile.tags.add(
+                        APIC(
+                            encoding=3,  # 3 is for utf-8
+                            mime='image/jpg',  # image/jpeg or image/png
+                            type=3,  # 3 is for the cover image
+                            desc=u'Cover',
+                            data=album_art_file.read()
+                        )
+                    )
+                audiofile.save()
+                print(f"Album art tagged for {file_path}.")
+                os.remove(album_art_path)  # Remove the image file after tagging
 
             # Correct file extension if necessary
             file_path = correct_file_extension(file_path, "mp3")
