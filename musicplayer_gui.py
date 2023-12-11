@@ -3,13 +3,16 @@ import pygame
 import tkinter as tk
 from tkinter import filedialog, ttk, messagebox
 from mutagen.mp3 import MP3
+from mutagen.id3 import ID3, APIC
+from PIL import Image, ImageTk
+from io import BytesIO
 
 class MusicPlayerGUI:
     def __init__(self, root):
         self.root = root
         root.title("Music Player")
         root.configure(bg='#2c2c2c')  # Set the background color to dark gray
-        root.geometry("800x600")
+        root.geometry("800x400")
 
         standard_font = ("Arial", 10)
         # Set the transparency of the window
@@ -43,7 +46,7 @@ class MusicPlayerGUI:
 
         # Song Image Placeholder
         self.song_image_label = tk.Label(self.right_frame, text='Song Image', bg='black', width=20, height=10)
-        self.song_image_label.pack(anchor='center', pady=20)
+        self.song_image_label.pack(anchor='center', pady=40)
 
         # Song Name Label
         self.song_name_label = tk.Label(self.right_frame, text='Song Name', bg='#2c2c2c', fg='white')
@@ -58,19 +61,19 @@ class MusicPlayerGUI:
         # self.progress.pack(fill=tk.X)
 
         # Previous Button
-        self.prev_button = tk.Button(self.controls_frame, text='Previous', command=self.prev_track, bg='#ff8c00', fg='black')
+        self.prev_button = tk.Button(self.controls_frame, text='  <<  ', command=self.prev_track, bg='#ff8c00', fg='black')
         self.prev_button.pack(side=tk.LEFT, padx=5)
 
         # Play/Pause Button
-        self.play_pause_button = tk.Button(self.controls_frame, text='Play', command=self.toggle_play_pause, bg='#ff8c00', fg='black')
+        self.play_pause_button = tk.Button(self.controls_frame, text='  >  ', command=self.toggle_play_pause, bg='#ff8c00', fg='black')
         self.play_pause_button.pack(side=tk.LEFT, padx=5)
 
         # Stop Button
-        self.stop_button = tk.Button(self.controls_frame, text='Stop', command=self.stop_music, bg='#ff8c00', fg='black')
+        self.stop_button = tk.Button(self.controls_frame, text='  O  ', command=self.stop_music, bg='#ff8c00', fg='black')
         self.stop_button.pack(side=tk.LEFT, padx=5)
 
         # Next Button
-        self.next_button = tk.Button(self.controls_frame, text='Next', command=self.next_track, bg='#ff8c00', fg='black')
+        self.next_button = tk.Button(self.controls_frame, text='  >>  ', command=self.next_track, bg='#ff8c00', fg='black')
         self.next_button.pack(side=tk.LEFT, padx=5)
 
         # Center the control buttons
@@ -89,10 +92,22 @@ class MusicPlayerGUI:
         self.stop_button.configure(font=standard_font)
         self.next_button.configure(font=standard_font)
 
+    def extract_album_art(self, track_path):
+        try:
+            file = MP3(track_path, ID3=ID3)
+            # Check for album art
+            for tag in file.tags.values():
+                if isinstance(tag, APIC):
+                    album_art = Image.open(BytesIO(tag.data))
+                    return album_art
+        except Exception as e:
+            print(f"Error extracting album art: {e}")
+        return None  # Return None if no album art is found or an error occurs
+    
     def update_song_selection(self):
         # Clear previous selection
         for i in range(self.track_listbox.size()):
-            self.track_listbox.itemconfig(i, {'bg': '#2c2c2c'})
+            self.track_listbox.itemconfig(i, {'bg': '#2c2c2c', 'fg': 'white'})
 
         # Highlight the current track
         if self.current_track_index is not None:
@@ -108,7 +123,8 @@ class MusicPlayerGUI:
             self.track_list = [f for f in os.listdir(self.music_folder) if f.endswith('.mp3')]
             self.track_listbox.delete(0, tk.END)
             for track in self.track_list:
-                self.track_listbox.insert(tk.END, track)
+                track_name_without_extension = os.path.splitext(track)[0]
+                self.track_listbox.insert(tk.END, track_name_without_extension)
 
     def toggle_play_pause(self):
         if not self.track_list:
@@ -128,6 +144,7 @@ class MusicPlayerGUI:
                 self.current_track_index = selected_index[0]
 
         track_name = self.track_list[self.current_track_index]
+        track_name_without_extension = os.path.splitext(track_name)[0]
         track_path = os.path.abspath(os.path.join(self.music_folder, track_name))
 
         try:
@@ -135,12 +152,23 @@ class MusicPlayerGUI:
             pygame.mixer.music.play()
             self.is_playing = True
             self.is_paused = False
-            self.play_pause_button.config(text='Pause')
+            self.play_pause_button.config(text='  ||  ')
 
             # Update the song name label with the current track's name
-            self.song_name_label.config(text=track_name)
+            self.song_name_label.config(text=track_name_without_extension)
             # Update the selection in the listbox
             self.update_song_selection()
+            # Extract and display album art
+            album_art = self.extract_album_art(track_path)
+            if album_art:
+                # Resize the image to fit the label
+                album_art = album_art.resize((200, 200), Image.Resampling.LANCZOS)
+                album_art_photo = ImageTk.PhotoImage(album_art)
+                self.song_image_label.config(image=album_art_photo, width=200, height=200)
+                self.song_image_label.image = album_art_photo  # Keep a reference
+            else:
+                # Clear the label and show a placeholder text if no album art is found
+                self.song_image_label.config(image='', text='No Album Art')
 
         except pygame.error as e:
             messagebox.showerror("Error playing track", f"An error occurred: {e}")
@@ -149,7 +177,7 @@ class MusicPlayerGUI:
         pygame.mixer.music.pause()
         self.is_playing = False
         self.is_paused = True
-        self.play_pause_button.config(text='Play')
+        self.play_pause_button.config(text='  >  ')
 
     def resume_music(self):
         if self.is_paused:
@@ -158,13 +186,13 @@ class MusicPlayerGUI:
         else:
             self.play_music()
         self.is_playing = True
-        self.play_pause_button.config(text='Pause')
+        self.play_pause_button.config(text='  ||  ')
 
     def stop_music(self):
         pygame.mixer.music.stop()
         self.is_playing = False
         self.is_paused = False
-        self.play_pause_button.config(text='Play')
+        self.play_pause_button.config(text='  >  ')
 
     def next_track(self):
         if self.track_list:  # Check if the list is not empty
