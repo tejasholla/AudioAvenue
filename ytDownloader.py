@@ -702,9 +702,18 @@ def main():
                 display_analytics()
                 clear_screen()
             elif answers['choice'] == 'Music Player':
+                clear_screen()
                 music_path = "D:\Media\Music"  # Or dynamically determine this path
-                initialize_music_player()
-                music_player_main(music_path)
+                interface_choice = interactive_prompt("Choose the interface for the music player", ["CLI", "GUI"])
+                if interface_choice == 'CLI':
+                    # Call the function that starts the music player in CLI mode
+                    initialize_music_player()
+                    music_player_main(music_path)
+                elif interface_choice == 'GUI':
+                    # Call the function or script that starts the music player in GUI mode
+                    subprocess.run(['python', 'musicplayer_gui.py', '--gui'])
+                else:
+                    print("Invalid choice. Please enter a valid option.")
                 clear_screen()
             elif answers['choice'] == 'Settings':
                 settings_choice = interactive_prompt("Select a setting to update", ["Update Preferences", "Feedback and Support", "Back to Main Menu"])
