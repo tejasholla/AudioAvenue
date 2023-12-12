@@ -25,7 +25,6 @@ class MusicPlayerGUI:
         song_name_font = ("Arial", 12, "bold")
         search_entry_font = font.Font(family="Arial", size=12, weight="bold")
         self.playlists = {}  # Key: playlist name, Value: list of song file paths
-        self.load_playlists()  # Load playlists on startup
         # Add this line to initialize playlist_selected
         self.playlist_selected = False
         # Initialize Pygame mixer
@@ -38,6 +37,7 @@ class MusicPlayerGUI:
         self.is_playing = False
         self.is_paused = False
         self.default_album_art_path = os.path.join(os.path.dirname(__file__), 'images\\album_art.png')
+        self.load_playlists()  # Load playlists on startup
 
         # Load control button images
         play_icon_path = os.path.join(os.path.dirname(__file__), 'images\\play_icon.png')
@@ -210,6 +210,7 @@ class MusicPlayerGUI:
 
     def on_playlist_double_clicked(self, event):
         selected_index = self.playlist_listbox.curselection()
+        self.playlist_selected = True
         if selected_index:
             selected_playlist = self.playlist_listbox.get(selected_index)
             self.play_playlist(selected_playlist)
@@ -226,14 +227,31 @@ class MusicPlayerGUI:
 
         # Create a right-click menu
         right_click_menu = tk.Menu(self.root, tearoff=0)
-        add_to_playlist_menu = tk.Menu(right_click_menu, tearoff=0)
 
+        if self.playlist_selected:
+            # Add option to remove song from playlist
+            right_click_menu.add_command(
+                label="Remove from Playlist", 
+                command=lambda: self.remove_song_from_playlist(selected_index)
+            )
+
+        add_to_playlist_menu = tk.Menu(right_click_menu, tearoff=0)
         # Populate the submenu with playlists
         for playlist in self.playlists.keys():
             add_to_playlist_menu.add_command(label=playlist, command=lambda pl=playlist: self.add_song_to_playlist(selected_song, pl))
 
         right_click_menu.add_cascade(label="Add to Playlist", menu=add_to_playlist_menu)
         right_click_menu.tk_popup(event.x_root, event.y_root)
+
+    def remove_song_from_playlist(self, song_index):
+        # Get the name of the currently selected playlist
+        playlist_name = self.playlist_listbox.get(tk.ACTIVE)
+        if playlist_name and playlist_name in self.playlists:
+            # Remove the song from the playlist
+            del self.playlists[playlist_name][song_index]
+            self.save_playlists()
+            # Refresh the song listbox to reflect the removal
+            self.play_playlist(playlist_name)
 
     def create_playlist_ui(self):
         # Create a simple input dialog to get the playlist name from the user
@@ -249,10 +267,10 @@ class MusicPlayerGUI:
 
     def add_song_to_playlist(self, song_name, playlist_name):
         if playlist_name in self.playlists:
-            self.playlist_selected = True  # Indicate that a playlist is now selected
-            # Find the full path of the song
-            song_path = os.path.abspath(os.path.join(self.music_folder, song_name + '.mp3'))
-            self.playlists[playlist_name].append(song_path)
+            self.playlist_selected = True
+            # Store only the song name with extension
+            song_file = song_name + '.mp3'
+            self.playlists[playlist_name].append(song_file)
             self.save_playlists()
 
     def play_playlist(self, playlist_name):
@@ -262,7 +280,7 @@ class MusicPlayerGUI:
             self.track_listbox.delete(0, tk.END)
 
             # Load tracks from the selected playlist
-            playlist_tracks = self.playlists[playlist_name]
+            playlist_tracks = [os.path.join(self.music_folder, name) for name in self.playlists[playlist_name]]
             self.track_list = playlist_tracks
 
             # Repopulate the listbox with playlist tracks
@@ -277,18 +295,21 @@ class MusicPlayerGUI:
                 self.play_music(0)
 
     def save_playlists(self):
+        # Convert full paths to just file names before saving
+        playlists_to_save = {}
+        for playlist_name, track_paths in self.playlists.items():
+            playlists_to_save[playlist_name] = [os.path.basename(path) for path in track_paths]
+    
         with open('playlists.json', 'w') as file:
-            json.dump(self.playlists, file)
+            json.dump(playlists_to_save, file)
 
     def load_playlists(self):
         try:
             with open('playlists.json', 'r') as file:
-                file_content = file.read()
-                # Check if the file is empty
-                if not file_content.strip():
-                    self.playlists = {}
-                else:
-                    self.playlists = json.loads(file_content)
+                loaded_playlists = json.load(file)
+                self.playlists = {}
+                for playlist_name, track_names in loaded_playlists.items():
+                    self.playlists[playlist_name] = [os.path.join(self.music_folder, name) for name in track_names]
         except (FileNotFoundError, json.JSONDecodeError):
             self.playlists = {}
 
@@ -383,12 +404,13 @@ class MusicPlayerGUI:
 
         if self.playlist_selected:
             track_path = self.track_list[self.current_track_index]
-            track_name = os.path.basename(track_path)  # Get the base name of the file
         else:
             track_name = self.track_list[self.current_track_index]
             track_path = os.path.abspath(os.path.join(self.music_folder, track_name))
 
-        track_name_without_extension = os.path.splitext(track_name)[0]
+        # Extract just the song name without the full path
+        track_name_without_extension = os.path.splitext(os.path.basename(track_path))[0]
+
         try:
             pygame.mixer.music.load(track_path)
             pygame.mixer.music.play()
@@ -404,12 +426,12 @@ class MusicPlayerGUI:
             self.song_name_label.config(text=track_name_without_extension)
             # Update the selection in the listbox
             self.update_song_selection()
-            
+        
             # Get and display the track duration
             audio = MP3(track_path)
             duration = int(audio.info.length)
             self.track_duration_label.config(text=self.format_time(duration))
-            
+        
             # Extract and display album art
             album_art = self.extract_album_art(track_path)
             if album_art:
