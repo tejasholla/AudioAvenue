@@ -36,18 +36,9 @@ class MusicPlayerGUI:
         self.default_album_art_path = os.path.join(os.path.dirname(__file__), 'images\\album_art.png')
 
         # Load control button images
-        stop_icon_path = os.path.join(os.path.dirname(__file__), 'images\\search_icon.png')
-        self.stop_image = ImageTk.PhotoImage(file=stop_icon_path)  # Update path as needed
-        next_icon_path = os.path.join(os.path.dirname(__file__), 'images\\search_icon.png')
-        self.next_image = ImageTk.PhotoImage(file=next_icon_path)  # Update path as needed
-
         play_icon_path = os.path.join(os.path.dirname(__file__), 'images\\play_icon.png')
         play_icon_image = PhotoImage(file=play_icon_path)  # Update path as needed
         play_icon_image = play_icon_image.subsample(2, 2)
-
-        pause_icon_path = os.path.join(os.path.dirname(__file__), 'images\\pause_icon.png')
-        pause_icon_image = PhotoImage(file=pause_icon_path)  # Update path as needed
-        pause_icon_image = pause_icon_image.subsample(2, 2)
 
         stop_icon_path = os.path.join(os.path.dirname(__file__), 'images\\stop_icon.png')
         stop_icon_image = PhotoImage(file=stop_icon_path)  # Update path as needed
@@ -128,7 +119,7 @@ class MusicPlayerGUI:
 
         # Control Buttons Frame
         self.controls_frame = tk.Frame(self.right_frame, bg='#2c2c2c')
-        self.controls_frame.pack(anchor='center', pady=20)
+        self.controls_frame.pack(anchor='center', pady=28)
 
         # Progress Bar
         # self.progress = ttk.Progressbar(self.controls_frame, orient='horizontal', mode='determinate', length=100)
@@ -137,22 +128,22 @@ class MusicPlayerGUI:
         # Previous Button
         self.prev_button = tk.Button(self.controls_frame, image=prev_icon_image, command=self.prev_track, bg='#ff8c00', borderwidth=0)
         self.prev_button.image = prev_icon_image  # Keep a reference
-        self.prev_button.pack(side=tk.LEFT, padx=5)
+        self.prev_button.pack(side=tk.LEFT, padx=7)
 
         # Play/Pause Button
         self.play_pause_button = tk.Button(self.controls_frame, image=play_icon_image, command=self.toggle_play_pause, bg='#ff8c00', borderwidth=0)
         self.play_pause_button.image = play_icon_image  # Keep a reference
-        self.play_pause_button.pack(side=tk.LEFT, padx=5)
+        self.play_pause_button.pack(side=tk.LEFT, padx=7)
 
         # Stop Button
         self.stop_button = tk.Button(self.controls_frame, image=stop_icon_image, command=self.stop_music, bg='#ff8c00', borderwidth=0)
         self.stop_button.image = stop_icon_image  # Keep a reference
-        self.stop_button.pack(side=tk.LEFT, padx=5)
+        self.stop_button.pack(side=tk.LEFT, padx=7)
 
         # Next Button
         self.next_button = tk.Button(self.controls_frame, image=next_icon_image, command=self.next_track, bg='#ff8c00', borderwidth=0)
         self.next_button.image = next_icon_image  # Keep a reference
-        self.next_button.pack(side=tk.LEFT, padx=5)
+        self.next_button.pack(side=tk.LEFT, padx=7)
 
         # Center the control buttons
         self.controls_frame.pack(anchor='center')
