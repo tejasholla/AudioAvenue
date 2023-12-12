@@ -1,20 +1,21 @@
 import os
 import pygame
 import tkinter as tk
-from tkinter import filedialog, ttk, messagebox
+from tkinter import filedialog, ttk, messagebox, simpledialog
 from mutagen.mp3 import MP3
 from mutagen.id3 import ID3, APIC
 from PIL import Image, ImageTk
 from io import BytesIO
 from tkinter import PhotoImage
 from tkinter import font
+import json
 
 class MusicPlayerGUI:
     def __init__(self, root):
         self.root = root
         root.title("Music Player")
         root.configure(bg='#2c2c2c')  # Set the background color to dark gray
-        root.geometry("830x430")
+        root.geometry("830x600")
 
         standard_font = ("Arial", 11, "bold")
         # Set the transparency of the window
@@ -23,7 +24,10 @@ class MusicPlayerGUI:
         time_label_font = ("Arial", 10, "bold")
         song_name_font = ("Arial", 12, "bold")
         search_entry_font = font.Font(family="Arial", size=12, weight="bold")
-
+        self.playlists = {}  # Key: playlist name, Value: list of song file paths
+        self.load_playlists()  # Load playlists on startup
+        # Add this line to initialize playlist_selected
+        self.playlist_selected = False
         # Initialize Pygame mixer
         pygame.mixer.init()
 
@@ -80,6 +84,7 @@ class MusicPlayerGUI:
         self.track_listbox = tk.Listbox(self.left_frame, bg='#2c2c2c', fg='white', selectbackground='black')
         self.track_listbox.pack(fill=tk.BOTH, expand=True)
         self.track_listbox.bind("<Double-1>", self.play_selected_song)  # Bind double-click event
+        self.track_listbox.bind('<Button-3>', self.on_right_click)
 
         # Automatically load music list if the directory exists
         if os.path.exists(self.music_folder):
@@ -89,13 +94,26 @@ class MusicPlayerGUI:
         self.load_button = tk.Button(self.left_frame, text='Load Music Folder', command=self.load_music_folder, bg='#ff8c00', fg='black')
         self.load_button.pack(fill=tk.X)
 
+        self.playlist_listbox = tk.Listbox(self.left_frame, bg='#2c2c2c', fg='white', selectbackground='black', height=1)
+        self.playlist_listbox.pack(fill=tk.BOTH, expand=True)
+
+        # Populate the playlist listbox
+        self.populate_playlist_listbox()
+
+        # Bind double-click event
+        self.playlist_listbox.bind("<Double-1>", self.on_playlist_double_clicked)
+        self.playlist_listbox.bind('<Button-3>', self.on_playlist_right_click)
+
+        self.create_playlist_button = tk.Button(self.left_frame, text='Create Playlist', command=self.create_playlist_ui, bg='#ff8c00', fg='black')
+        self.create_playlist_button.pack(fill=tk.X)
+
         # Right Frame for Song Details
         self.right_frame = tk.Frame(root, bg='#2c2c2c')
         self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 
         # Song Image Placeholder
         self.song_image_label = tk.Label(self.right_frame, text='Song Image', bg='black', width=20, height=10)
-        self.song_image_label.pack(anchor='center', pady=35)
+        self.song_image_label.pack(anchor='center', pady=50)
 
         # Song Name Label
         self.song_name_label = tk.Label(self.right_frame, text='Song Name', bg='#2c2c2c', fg='white', font=song_name_font)
@@ -151,10 +169,128 @@ class MusicPlayerGUI:
         # Update the font for buttons and labels
         self.load_button.configure(font=standard_font)
         self.track_listbox.configure(font=standard_font)
-
+        self.playlist_listbox.configure(font=standard_font)
         self.song_image_label.configure(font=standard_font)
         self.song_name_label.configure(font=standard_font)
         # self.song_details_label.configure(font=standard_font)  # Uncomment if you use it
+
+    def on_playlist_right_click(self, event):
+        try:
+            selected_index = self.playlist_listbox.nearest(event.y)
+            self.playlist_listbox.select_clear(0, tk.END)
+            self.playlist_listbox.select_set(selected_index)
+            selected_playlist = self.playlist_listbox.get(selected_index)
+        except IndexError:
+            return  # No playlist selected
+
+        # Create a right-click menu
+        right_click_menu = tk.Menu(self.root, tearoff=0)
+        right_click_menu.add_command(label="Delete Playlist", command=lambda: self.delete_playlist(selected_playlist))
+        right_click_menu.add_command(label="Rename Playlist", command=lambda: self.rename_playlist(selected_playlist))
+
+        right_click_menu.tk_popup(event.x_root, event.y_root)
+
+    def delete_playlist(self, playlist_name):
+        if messagebox.askyesno("Delete Playlist", f"Are you sure you want to delete '{playlist_name}'?"):
+            del self.playlists[playlist_name]
+            self.save_playlists()
+            self.populate_playlist_listbox()
+
+    def rename_playlist(self, old_name):
+        new_name = simpledialog.askstring("Rename Playlist", "Enter new playlist name:", initialvalue=old_name)
+        if new_name and new_name != old_name:
+            self.playlists[new_name] = self.playlists.pop(old_name)
+            self.save_playlists()
+            self.populate_playlist_listbox()
+
+    def populate_playlist_listbox(self):
+        self.playlist_listbox.delete(0, tk.END)  # Clear existing items
+        for playlist in self.playlists.keys():
+            self.playlist_listbox.insert(tk.END, playlist)
+
+    def on_playlist_double_clicked(self, event):
+        selected_index = self.playlist_listbox.curselection()
+        if selected_index:
+            selected_playlist = self.playlist_listbox.get(selected_index)
+            self.play_playlist(selected_playlist)
+
+    def on_right_click(self, event):
+        # Get the selected song
+        try:
+            selected_index = self.track_listbox.nearest(event.y)
+            self.track_listbox.select_clear(0, tk.END)
+            self.track_listbox.select_set(selected_index)
+            selected_song = self.track_listbox.get(selected_index)
+        except IndexError:
+            return  # No song selected
+
+        # Create a right-click menu
+        right_click_menu = tk.Menu(self.root, tearoff=0)
+        add_to_playlist_menu = tk.Menu(right_click_menu, tearoff=0)
+
+        # Populate the submenu with playlists
+        for playlist in self.playlists.keys():
+            add_to_playlist_menu.add_command(label=playlist, command=lambda pl=playlist: self.add_song_to_playlist(selected_song, pl))
+
+        right_click_menu.add_cascade(label="Add to Playlist", menu=add_to_playlist_menu)
+        right_click_menu.tk_popup(event.x_root, event.y_root)
+
+    def create_playlist_ui(self):
+        # Create a simple input dialog to get the playlist name from the user
+        playlist_name = simpledialog.askstring("Playlist", "Enter playlist name:")
+        if playlist_name:
+            self.create_playlist(playlist_name)
+            self.populate_playlist_listbox()
+
+    def create_playlist(self, playlist_name):
+        if playlist_name not in self.playlists:
+            self.playlists[playlist_name] = []
+            self.save_playlists()
+
+    def add_song_to_playlist(self, song_name, playlist_name):
+        if playlist_name in self.playlists:
+            self.playlist_selected = True  # Indicate that a playlist is now selected
+            # Find the full path of the song
+            song_path = os.path.abspath(os.path.join(self.music_folder, song_name + '.mp3'))
+            self.playlists[playlist_name].append(song_path)
+            self.save_playlists()
+
+    def play_playlist(self, playlist_name):
+        if playlist_name in self.playlists:
+            # Clear the current track list and the listbox
+            self.track_list = []
+            self.track_listbox.delete(0, tk.END)
+
+            # Load tracks from the selected playlist
+            playlist_tracks = self.playlists[playlist_name]
+            self.track_list = playlist_tracks
+
+            # Repopulate the listbox with playlist tracks
+            for track_path in playlist_tracks:
+                track_name = os.path.basename(track_path)  # Get the base name of the file
+                track_name_without_extension = os.path.splitext(track_name)[0]  # Remove the file extension
+                self.track_listbox.insert(tk.END, track_name_without_extension)
+
+            # If the playlist has songs, play the first song
+            if self.track_list:
+                self.current_track_index = 0
+                self.play_music(0)
+
+    def save_playlists(self):
+        with open('playlists.json', 'w') as file:
+            json.dump(self.playlists, file)
+
+    def load_playlists(self):
+        try:
+            with open('playlists.json', 'r') as file:
+                file_content = file.read()
+                # Check if the file is empty
+                if not file_content.strip():
+                    self.playlists = {}
+                else:
+                    self.playlists = json.loads(file_content)
+        except (FileNotFoundError, json.JSONDecodeError):
+            self.playlists = {}
 
     def search_songs(self):
         search_term = self.search_var.get().lower()
@@ -215,6 +351,7 @@ class MusicPlayerGUI:
     def load_music_folder(self):
         self.music_folder = filedialog.askdirectory()
         if self.music_folder:
+            self.playlist_selected = False  # No playlist is selected
             self.track_list = [f for f in os.listdir(self.music_folder) if f.endswith('.mp3')]
             self.track_listbox.delete(0, tk.END)
             for track in self.track_list:
@@ -244,10 +381,14 @@ class MusicPlayerGUI:
             if selected_index:
                 self.current_track_index = selected_index[0]
 
-        track_name = self.track_list[self.current_track_index]
-        track_name_without_extension = os.path.splitext(track_name)[0]
-        track_path = os.path.abspath(os.path.join(self.music_folder, track_name))
+        if self.playlist_selected:
+            track_path = self.track_list[self.current_track_index]
+            track_name = os.path.basename(track_path)  # Get the base name of the file
+        else:
+            track_name = self.track_list[self.current_track_index]
+            track_path = os.path.abspath(os.path.join(self.music_folder, track_name))
 
+        track_name_without_extension = os.path.splitext(track_name)[0]
         try:
             pygame.mixer.music.load(track_path)
             pygame.mixer.music.play()
