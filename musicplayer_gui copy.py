@@ -19,10 +19,10 @@ class MusicPlayerGUI:
 
     def setup_window(self, root):
         root.title("Music Player")
-        root.configure(bg='#2c2c2c')
+        root.configure(bg='#121212')
         root.geometry("830x600")
         # Set the transparency of the window
-        root.attributes('-alpha', 0.95)    # Adjust the value as needed, e.g., 0.95 for 95% opacity 
+        root.attributes('-alpha', 0.97)    # Adjust the value as needed, e.g., 0.95 for 95% opacity 
 
     def initialize_variables(self):
         self.playlists = {}     # Key: playlist name, Value: list of song file paths
@@ -35,6 +35,9 @@ class MusicPlayerGUI:
         self.is_playing = False
         self.is_paused = False
         self.default_album_art_path = self.get_resource_path('album_art.png')
+        self.playlist_storage_path = "D:\\Media"  # Change this to the desired path
+        if not os.path.exists(self.playlist_storage_path):
+            os.makedirs(self.playlist_storage_path)
         self.load_playlists()
         
     def get_resource_path(self, file_name):
@@ -47,10 +50,11 @@ class MusicPlayerGUI:
 
     def setup_ui_elements(self, root):
         # Font settings
-        standard_font = ("Arial", 11, "bold")
-        time_label_font = ("Arial", 10, "bold")
-        song_name_font = ("Arial", 12, "bold")
-        search_entry_font = font.Font(family="Arial", size=12, weight="bold")
+        standard_font = ("Calibri", 11, "bold")
+        time_label_font = ("Calibri", 10, "bold")
+        song_name_font = ("Calibri", 12, "bold")
+        header_font = ("Calibri", 14, "bold")
+        search_entry_font = font.Font(family="Calibri", size=12, weight="bold")
 
         play_icon_image = self.load_image('play_icon.png')
         stop_icon_image = self.load_image('stop_icon.png')
@@ -88,9 +92,9 @@ class MusicPlayerGUI:
         if os.path.exists(self.music_folder):
             self.populate_music_list()
 
-        # Load Button
-        self.load_button = tk.Button(self.left_frame, text='Load Music Folder', command=self.load_music_folder, bg='#ff8c00', fg='black')
-        self.load_button.pack(fill=tk.X)
+        # Playlist Label
+        self.playlist_label = tk.Label(self.left_frame, text='Playlist', bg='#2c2c2c', fg='#ff8c00', font=header_font, anchor='w')
+        self.playlist_label.pack(fill=tk.X)
 
         self.playlist_listbox = tk.Listbox(self.left_frame, bg='#2c2c2c', fg='white', selectbackground='black', height=1)
         self.playlist_listbox.pack(fill=tk.BOTH, expand=True)
@@ -102,8 +106,17 @@ class MusicPlayerGUI:
         self.playlist_listbox.bind("<Double-1>", self.on_playlist_double_clicked)
         self.playlist_listbox.bind('<Button-3>', self.on_playlist_right_click)
 
-        self.create_playlist_button = tk.Button(self.left_frame, text='Create Playlist', command=self.create_playlist_ui, bg='#ff8c00', fg='black')
-        self.create_playlist_button.pack(fill=tk.X)
+        # Create a frame for the Load Button and Create Playlist Button
+        buttons_frame = tk.Frame(self.left_frame, bg='#2c2c2c')
+        buttons_frame.pack(fill=tk.X)
+
+        # Create Playlist Button - "+" button
+        self.create_playlist_button = tk.Button(buttons_frame, text=' + ', command=self.create_playlist_ui, bg='black', fg='#ff8c00', font=header_font)
+        self.create_playlist_button.pack(side=tk.RIGHT, padx=2)  # Align to the right
+
+        # Load Button
+        self.load_button = tk.Button(buttons_frame, text='Load Music Folder', command=self.load_music_folder, bg='#ff8c00', fg='black', font=header_font)
+        self.load_button.pack(side=tk.LEFT, expand=True, fill=tk.X)  # Fill the remaining space
 
         # Right Frame for Song Details
         self.right_frame = tk.Frame(root, bg='#2c2c2c')
@@ -317,12 +330,12 @@ class MusicPlayerGUI:
         for playlist_name, track_paths in self.playlists.items():
             playlists_to_save[playlist_name] = [os.path.basename(path) for path in track_paths]
     
-        with open('playlists.json', 'w') as file:
+        with open(os.path.join(self.playlist_storage_path, 'playlists.json'), 'w') as file:
             json.dump(playlists_to_save, file)
 
     def load_playlists(self):
         try:
-            with open('playlists.json', 'r') as file:
+            with open(os.path.join(self.playlist_storage_path, 'playlists.json'), 'r') as file:
                 loaded_playlists = json.load(file)
                 self.playlists = {}
                 for playlist_name, track_names in loaded_playlists.items():

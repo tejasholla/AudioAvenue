@@ -13,48 +13,53 @@ import json
 class MusicPlayerGUI:
     def __init__(self, root):
         self.root = root
-        root.title("Music Player")
-        root.configure(bg='#2c2c2c')  # Set the background color to dark gray
-        root.geometry("830x600")
+        self.setup_window(root)
+        self.initialize_variables()
+        self.setup_ui_elements(root)
 
-        standard_font = ("Arial", 11, "bold")
+    def setup_window(self, root):
+        root.title("Music Player")
+        root.configure(bg='#121212')
+        root.geometry("830x600")
         # Set the transparency of the window
-        root.attributes('-alpha', 0.95)  # Adjust the value as needed, e.g., 0.95 for 95% opacity
-        # Font settings
-        time_label_font = ("Arial", 10, "bold")
-        song_name_font = ("Arial", 12, "bold")
-        search_entry_font = font.Font(family="Arial", size=12, weight="bold")
-        self.playlists = {}  # Key: playlist name, Value: list of song file paths
+        root.attributes('-alpha', 0.97)    # Adjust the value as needed, e.g., 0.95 for 95% opacity 
+
+    def initialize_variables(self):
+        self.playlists = {}     # Key: playlist name, Value: list of song file paths
         # Add this line to initialize playlist_selected
         self.playlist_selected = False
-        # Initialize Pygame mixer
         pygame.mixer.init()
-
-        # Variables
         self.track_list = []
         self.current_track_index = 0
         self.music_folder = "D:\\Media\\Music"
         self.is_playing = False
         self.is_paused = False
-        self.default_album_art_path = os.path.join(os.path.dirname(__file__), 'images\\album_art.png')
-        self.load_playlists()  # Load playlists on startup
+        self.default_album_art_path = self.get_resource_path('album_art.png')
+        self.playlist_storage_path = "D:\\Media"  # Change this to the desired path
+        if not os.path.exists(self.playlist_storage_path):
+            os.makedirs(self.playlist_storage_path)
+        self.load_playlists()
+        
+    def get_resource_path(self, file_name):
+        return os.path.join(os.path.dirname(__file__), f'images\\{file_name}')
 
-        # Load control button images
-        play_icon_path = os.path.join(os.path.dirname(__file__), 'images\\play_icon.png')
-        play_icon_image = PhotoImage(file=play_icon_path)  # Update path as needed
-        play_icon_image = play_icon_image.subsample(2, 2)
+    def load_image(self, image_name, size_reduction_factor=2):
+        image_path = self.get_resource_path(image_name)
+        image = PhotoImage(file=image_path)
+        return image.subsample(size_reduction_factor, size_reduction_factor)
 
-        stop_icon_path = os.path.join(os.path.dirname(__file__), 'images\\stop_icon.png')
-        stop_icon_image = PhotoImage(file=stop_icon_path)  # Update path as needed
-        stop_icon_image = stop_icon_image.subsample(2, 2)
+    def setup_ui_elements(self, root):
+        # Font settings
+        standard_font = ("Calibri", 11, "bold")
+        time_label_font = ("Calibri", 10, "bold")
+        song_name_font = ("Calibri", 12, "bold")
+        header_font = ("Calibri", 14, "bold")
+        search_entry_font = font.Font(family="Calibri", size=12, weight="bold")
 
-        next_icon_path = os.path.join(os.path.dirname(__file__), 'images\\next_icon.png')
-        next_icon_image = PhotoImage(file=next_icon_path)  # Update path as needed
-        next_icon_image = next_icon_image.subsample(2, 2)
-
-        prev_icon_path = os.path.join(os.path.dirname(__file__), 'images\\previous_icon.png')
-        prev_icon_image = PhotoImage(file=prev_icon_path)  # Update path as needed
-        prev_icon_image = prev_icon_image.subsample(2, 2)
+        play_icon_image = self.load_image('play_icon.png')
+        stop_icon_image = self.load_image('stop_icon.png')
+        next_icon_image = self.load_image('next_icon.png')
+        prev_icon_image = self.load_image('previous_icon.png') 
 
         # Left Frame for Songs List and Load Button
         self.left_frame = tk.Frame(root, bg='#2c2c2c')
@@ -71,9 +76,6 @@ class MusicPlayerGUI:
         # Assuming you have a search icon image named 'search_icon.png' in the same directory as your script
         search_icon_path = os.path.join(os.path.dirname(__file__), 'images\\search_icon.png')
         search_icon_image = PhotoImage(file=search_icon_path)
-
-        # Resize the image using 'subsample'. The arguments (x, y) will reduce the image size by those factors. 
-        # If the image is 64x64 and you want to make it 32x32, you would use subsample(2, 2).
         search_icon_image = search_icon_image.subsample(3, 3)  # Adjust the subsample values as needed
 
         self.search_button = tk.Button(border_frame, image=search_icon_image, command=self.search_songs, bg='#ff8c00', borderwidth=0)
@@ -90,9 +92,9 @@ class MusicPlayerGUI:
         if os.path.exists(self.music_folder):
             self.populate_music_list()
 
-        # Load Button
-        self.load_button = tk.Button(self.left_frame, text='Load Music Folder', command=self.load_music_folder, bg='#ff8c00', fg='black')
-        self.load_button.pack(fill=tk.X)
+        # Playlist Label
+        self.playlist_label = tk.Label(self.left_frame, text='Playlist', bg='#2c2c2c', fg='#ff8c00', font=header_font, anchor='w')
+        self.playlist_label.pack(fill=tk.X)
 
         self.playlist_listbox = tk.Listbox(self.left_frame, bg='#2c2c2c', fg='white', selectbackground='black', height=1)
         self.playlist_listbox.pack(fill=tk.BOTH, expand=True)
@@ -104,8 +106,17 @@ class MusicPlayerGUI:
         self.playlist_listbox.bind("<Double-1>", self.on_playlist_double_clicked)
         self.playlist_listbox.bind('<Button-3>', self.on_playlist_right_click)
 
-        self.create_playlist_button = tk.Button(self.left_frame, text='Create Playlist', command=self.create_playlist_ui, bg='#ff8c00', fg='black')
-        self.create_playlist_button.pack(fill=tk.X)
+        # Create a frame for the Load Button and Create Playlist Button
+        buttons_frame = tk.Frame(self.left_frame, bg='#2c2c2c')
+        buttons_frame.pack(fill=tk.X)
+
+        # Create Playlist Button - "+" button
+        self.create_playlist_button = tk.Button(buttons_frame, text=' + ', command=self.create_playlist_ui, bg='black', fg='#ff8c00', font=header_font)
+        self.create_playlist_button.pack(side=tk.RIGHT, padx=2)  # Align to the right
+
+        # Load Button
+        self.load_button = tk.Button(buttons_frame, text='Load Music Folder', command=self.load_music_folder, bg='#ff8c00', fg='black', font=header_font)
+        self.load_button.pack(side=tk.LEFT, expand=True, fill=tk.X)  # Fill the remaining space
 
         # Right Frame for Song Details
         self.right_frame = tk.Frame(root, bg='#2c2c2c')
@@ -235,6 +246,13 @@ class MusicPlayerGUI:
                 command=lambda: self.remove_song_from_playlist(selected_index)
             )
 
+        # Add option to delete song from directory if no playlist is selected
+        if not self.playlist_selected:
+            right_click_menu.add_command(
+                label="Delete Song", 
+                command=lambda: self.delete_song_from_directory(selected_song)
+            )
+
         add_to_playlist_menu = tk.Menu(right_click_menu, tearoff=0)
         # Populate the submenu with playlists
         for playlist in self.playlists.keys():
@@ -242,6 +260,18 @@ class MusicPlayerGUI:
 
         right_click_menu.add_cascade(label="Add to Playlist", menu=add_to_playlist_menu)
         right_click_menu.tk_popup(event.x_root, event.y_root)
+
+    def delete_song_from_directory(self, song_name):
+        # Confirm deletion
+        if messagebox.askyesno("Delete Song", f"Are you sure you want to delete '{song_name}'?"):
+            try:
+                # Construct the full path of the song and delete it
+                song_path = os.path.join(self.music_folder, song_name + ".mp3")
+                os.remove(song_path)
+                # Update the song list
+                self.populate_music_list()
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to delete the song: {e}")
 
     def remove_song_from_playlist(self, song_index):
         # Get the name of the currently selected playlist
@@ -300,12 +330,12 @@ class MusicPlayerGUI:
         for playlist_name, track_paths in self.playlists.items():
             playlists_to_save[playlist_name] = [os.path.basename(path) for path in track_paths]
     
-        with open('playlists.json', 'w') as file:
+        with open(os.path.join(self.playlist_storage_path, 'playlists.json'), 'w') as file:
             json.dump(playlists_to_save, file)
 
     def load_playlists(self):
         try:
-            with open('playlists.json', 'r') as file:
+            with open(os.path.join(self.playlist_storage_path, 'playlists.json'), 'r') as file:
                 loaded_playlists = json.load(file)
                 self.playlists = {}
                 for playlist_name, track_names in loaded_playlists.items():
@@ -416,9 +446,7 @@ class MusicPlayerGUI:
             pygame.mixer.music.play()
             self.is_playing = True
             self.is_paused = False
-            # Change the button to show the 'pause' icon
-            pause_icon_path = os.path.join(os.path.dirname(__file__), 'images\\pause_icon.png')
-            pause_icon_image = PhotoImage(file=pause_icon_path).subsample(2, 2)  # Assuming you want to resize
+            pause_icon_image = self.load_image('pause_icon.png')
             self.play_pause_button.config(image=pause_icon_image)
             self.play_pause_button.image = pause_icon_image  # Keep a reference
 
@@ -461,12 +489,9 @@ class MusicPlayerGUI:
         pygame.mixer.music.pause()
         self.is_playing = False
         self.is_paused = True
-        # Change the button to show the 'play' icon
-        play_icon_path = os.path.join(os.path.dirname(__file__), 'images\\play_icon.png')
-        play_icon_image = PhotoImage(file=play_icon_path).subsample(2, 2)  # Assuming you want to resize
+        play_icon_image = self.load_image('play_icon.png')
         self.play_pause_button.config(image=play_icon_image)
         self.play_pause_button.image = play_icon_image  # Keep a reference
-
 
     def resume_music(self):
         if self.is_paused:
@@ -475,9 +500,7 @@ class MusicPlayerGUI:
         else:
             self.play_music()
         self.is_playing = True
-        # Change the button to show the 'pause' icon
-        pause_icon_path = os.path.join(os.path.dirname(__file__), 'images\\pause_icon.png')
-        pause_icon_image = PhotoImage(file=pause_icon_path).subsample(2, 2)  # Assuming you want to resize
+        pause_icon_image = self.load_image('pause_icon.png')
         self.play_pause_button.config(image=pause_icon_image)
         self.play_pause_button.image = pause_icon_image  # Keep a reference
 
@@ -485,12 +508,9 @@ class MusicPlayerGUI:
         pygame.mixer.music.stop()
         self.is_playing = False
         self.is_paused = False
-        # Change the button to show the 'play' icon
-        play_icon_path = os.path.join(os.path.dirname(__file__), 'images\\play_icon.png')
-        play_icon_image = PhotoImage(file=play_icon_path).subsample(2, 2)  # Assuming you want to resize
+        play_icon_image = self.load_image('play_icon.png')
         self.play_pause_button.config(image=play_icon_image)
         self.play_pause_button.image = play_icon_image  # Keep a reference
-
 
     def next_track(self):
         if self.track_list:  # Check if the list is not empty
