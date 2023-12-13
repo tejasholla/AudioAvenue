@@ -658,6 +658,26 @@ def feedback_and_support():
 
         send_feedback_via_email(user_input)
 
+def single_video(download_choice, download_dir, log_dir):
+    url = input("Please enter the full YouTube URL (video or playlist): ")
+    if 'playlist' in url:
+        playlist_choice = interactive_prompt("Download entire playlist or select specific videos?", ["Entire", "Select"])
+        playlist_path = input("\nEnter the folder name for the playlist: ")
+        path_playlist = os.path.join(download_dir, "Playlists", playlist_path)
+        os.makedirs(path_playlist, exist_ok=True)
+        download_playlist(url, path_playlist, download_choice, log_dir, playlist_choice)
+    else:
+        if download_choice == 'Video':
+            video_path = os.path.join(download_dir, "Videos")
+            os.makedirs(video_path, exist_ok=True)
+            yt = YouTube(url)
+            download_highest_quality_video(yt, video_path, log_dir)
+        elif download_choice == 'Audio':
+            audio_path = os.path.join(download_dir, "Music")
+            os.makedirs(audio_path, exist_ok=True)
+            yt = YouTube(url)
+            download_audio(yt, audio_path, log_dir)
+
 # Main function to handle user input and start the download process
 def main():
     try:
@@ -712,24 +732,7 @@ def main():
                     elif download_choice == 'Audio':
                         batch_download(custom_playlist_urls, custom_playlist_path, "Audio", log_dir)
                 else:
-                    url = input("Please enter the full YouTube URL (video or playlist): ")
-                    if 'playlist' in url:
-                        playlist_choice = interactive_prompt("Download entire playlist or select specific videos?", ["Entire", "Select"])
-                        playlist_path = input("\nEnter the folder name for the playlist: ")
-                        path_playlist = os.path.join(download_dir, "Playlists", playlist_path)
-                        os.makedirs(path_playlist, exist_ok=True)
-                        download_playlist(url, path_playlist, download_choice, log_dir, playlist_choice)
-                    else:
-                        if download_choice == 'Video':
-                            video_path = os.path.join(download_dir, "Videos")
-                            os.makedirs(video_path, exist_ok=True)
-                            yt = YouTube(url)
-                            download_highest_quality_video(yt, video_path, log_dir)
-                        elif download_choice == 'Audio':
-                            audio_path = os.path.join(download_dir, "Music")
-                            os.makedirs(audio_path, exist_ok=True)
-                            yt = YouTube(url)
-                            download_audio(yt, audio_path, log_dir)
+                    single_video(download_choice, download_dir, log_dir)
                 clear_screen()
             elif answers['choice'] == 'View Download Analytics':
                 clear_screen()
