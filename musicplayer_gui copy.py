@@ -16,7 +16,6 @@ class MusicPlayerGUI:
         self.setup_window(root)
         self.initialize_variables()
         self.setup_ui_elements(root)
-        self.load_playlists()
 
     def setup_window(self, root):
         root.title("Music Player")
@@ -36,7 +35,8 @@ class MusicPlayerGUI:
         self.is_playing = False
         self.is_paused = False
         self.default_album_art_path = self.get_resource_path('album_art.png')
-
+        self.load_playlists()
+        
     def get_resource_path(self, file_name):
         return os.path.join(os.path.dirname(__file__), f'images\\{file_name}')
 
@@ -233,6 +233,13 @@ class MusicPlayerGUI:
                 command=lambda: self.remove_song_from_playlist(selected_index)
             )
 
+        # Add option to delete song from directory if no playlist is selected
+        if not self.playlist_selected:
+            right_click_menu.add_command(
+                label="Delete Song", 
+                command=lambda: self.delete_song_from_directory(selected_song)
+            )
+
         add_to_playlist_menu = tk.Menu(right_click_menu, tearoff=0)
         # Populate the submenu with playlists
         for playlist in self.playlists.keys():
@@ -240,6 +247,18 @@ class MusicPlayerGUI:
 
         right_click_menu.add_cascade(label="Add to Playlist", menu=add_to_playlist_menu)
         right_click_menu.tk_popup(event.x_root, event.y_root)
+
+    def delete_song_from_directory(self, song_name):
+        # Confirm deletion
+        if messagebox.askyesno("Delete Song", f"Are you sure you want to delete '{song_name}'?"):
+            try:
+                # Construct the full path of the song and delete it
+                song_path = os.path.join(self.music_folder, song_name + ".mp3")
+                os.remove(song_path)
+                # Update the song list
+                self.populate_music_list()
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to delete the song: {e}")
 
     def remove_song_from_playlist(self, song_index):
         # Get the name of the currently selected playlist
@@ -461,7 +480,6 @@ class MusicPlayerGUI:
         self.play_pause_button.config(image=play_icon_image)
         self.play_pause_button.image = play_icon_image  # Keep a reference
 
-
     def resume_music(self):
         if self.is_paused:
             pygame.mixer.music.unpause()
@@ -480,7 +498,6 @@ class MusicPlayerGUI:
         play_icon_image = self.load_image('play_icon.png')
         self.play_pause_button.config(image=play_icon_image)
         self.play_pause_button.image = play_icon_image  # Keep a reference
-
 
     def next_track(self):
         if self.track_list:  # Check if the list is not empty
