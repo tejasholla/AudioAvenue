@@ -668,9 +668,8 @@ def main():
         log_dir = preferences['log_directory']
         #download_dir = args.directory if args.directory else get_default_directory('download')
         download_dir = preferences['download_directory']
-
+        clear_screen()
         while True:  # Continuous loop until exit is chosen
-            clear_screen()
             print("\033[91mYouTube Downloader [" + CURRENT_VERSION + "]\033[0m")
             check_for_updates()
             questions = [
@@ -682,6 +681,7 @@ def main():
             answers = inquirer.prompt(questions)
 
             if answers['choice'] == 'Download Video/Audio':
+                clear_screen()
                 download_choice = interactive_prompt("What do you want to download?", ["Video", "Audio"])
                 mode_choice = interactive_prompt("Choose download mode", ["Single", "Batch", "Custom Playlist"])
 
@@ -732,8 +732,8 @@ def main():
                             download_audio(yt, audio_path, log_dir)
                 clear_screen()
             elif answers['choice'] == 'View Download Analytics':
-                display_analytics()
                 clear_screen()
+                display_analytics()
             elif answers['choice'] == 'Music Player':
                 clear_screen()
                 music_path = "D:\Media\Music"  # Or dynamically determine this path
@@ -749,6 +749,7 @@ def main():
                     print("Invalid choice. Please enter a valid option.")
                 clear_screen()
             elif answers['choice'] == 'Settings':
+                clear_screen()
                 settings_choice = interactive_prompt("Select a setting to update", ["Update Preferences", "Feedback and Support", "Back to Main Menu"])
                 if settings_choice == 'Update Preferences':
                     update_preferences(preferences)
