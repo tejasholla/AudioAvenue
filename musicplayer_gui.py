@@ -19,6 +19,7 @@ class MusicPlayerGUI:
         self.setup_ui_elements(root)
         # Automatically display all songs on startup
         self.play_playlist(self.all_songs_playlist_name)
+        self.update_playlists_periodically()
 
     def setup_window(self, root):
         root.title("AudioAvenue")
@@ -123,7 +124,7 @@ class MusicPlayerGUI:
         self.search_button.pack(side=tk.LEFT)
 
         # Songs Listbox
-        self.track_listbox = tk.Listbox(self.left_frame, bg=self.bg_color, fg=self.text_color, selectbackground=self.separator_color, borderwidth=0)
+        self.track_listbox = tk.Listbox(self.left_frame, bg=self.bg_color, fg=self.text_color, selectmode=tk.EXTENDED, selectbackground=self.separator_color, borderwidth=0)
         self.track_listbox.pack(fill=tk.BOTH, expand=True)
         self.track_listbox.bind("<Double-1>", self.play_selected_song)  # Bind double-click event
         self.track_listbox.bind('<Button-3>', self.on_right_click)
@@ -237,6 +238,30 @@ class MusicPlayerGUI:
         self.song_name_label.configure(font=standard_font)
         # self.song_details_label.configure(font=standard_font)  # Uncomment if you use it
 
+    def update_playlists_from_folders(self):
+        playlists_updated = False
+        for playlist_name in self.playlists.keys():
+            playlist_folder = os.path.join(self.playlist_storage_path, playlist_name)
+            if os.path.exists(playlist_folder):
+                updated_playlist = []
+                for file in os.listdir(playlist_folder):
+                    if file.endswith('.mp3'):
+                        updated_playlist.append(os.path.join(playlist_folder, file))
+                if set(updated_playlist) != set(self.playlists[playlist_name]):
+                    playlists_updated = True
+                    self.playlists[playlist_name] = updated_playlist
+        if playlists_updated:
+            self.save_playlists()
+            self.populate_playlist_listbox()
+            if self.playlist_selected:
+                self.play_playlist(self.playlist_listbox.get(tk.ACTIVE))
+
+    def update_playlists_periodically(self):
+        self.update_playlists_from_folders()
+        self.populate_playlist_listbox()
+        # Call this method again after a specified time interval, e.g., 30000 milliseconds (30 seconds)
+        self.root.after(10000, self.update_playlists_periodically)
+
     def create_round_button(self, frame, text, command):
         # Create a canvas to hold the button
         canvas = tk.Canvas(frame, width=30, height=30, bg=self.bg_color, highlightthickness=0)
@@ -306,67 +331,100 @@ class MusicPlayerGUI:
 
     def on_playlist_double_clicked(self, event):
         selected_index = self.playlist_listbox.curselection()
-        self.playlist_selected = True
         if selected_index:
             selected_playlist = self.playlist_listbox.get(selected_index)
+            if selected_playlist == self.all_songs_playlist_name:
+                self.playlist_selected = False  # Set to False for "All Songs"
+            else:
+                self.playlist_selected = True
             self.play_playlist(selected_playlist)
 
     def on_right_click(self, event):
-        # Get the selected song
         try:
-            selected_index = self.track_listbox.nearest(event.y)
-            self.track_listbox.select_clear(0, tk.END)
-            self.track_listbox.select_set(selected_index)
-            selected_song = self.track_listbox.get(selected_index)
+            clicked_index = self.track_listbox.nearest(event.y)
+
+            if clicked_index not in self.track_listbox.curselection():
+                self.track_listbox.select_clear(0, tk.END)
+                self.track_listbox.select_set(clicked_index)
+
+            right_click_menu = tk.Menu(self.root, tearoff=0)
+
+            if self.playlist_selected:
+                right_click_menu.add_command(label="Remove from Playlist", command=self.remove_song_from_playlist)
+            else:
+                right_click_menu.add_command(label="Delete Song", command=self.delete_song_from_directory)
+
+            add_to_playlist_menu = tk.Menu(right_click_menu, tearoff=0)
+            for playlist in self.playlists.keys():
+                add_to_playlist_menu.add_command(
+                    label=playlist, 
+                    command=lambda pl=playlist: self.add_selected_songs_to_playlist(pl)
+                )
+
+            right_click_menu.add_cascade(label="Add to Playlist", menu=add_to_playlist_menu)
+            right_click_menu.tk_popup(event.x_root, event.y_root)
         except IndexError:
             return  # No song selected
 
-        # Create a right-click menu
-        right_click_menu = tk.Menu(self.root, tearoff=0)
+    def add_selected_songs_to_playlist(self, playlist_name):
+        selected_indices = self.track_listbox.curselection()
+        for index in selected_indices:
+            song_name = self.track_listbox.get(index)
+            self.add_song_to_playlist(song_name, playlist_name)
 
-        if self.playlist_selected:
-            # Add option to remove song from playlist
-            right_click_menu.add_command(
-                label="Remove from Playlist", 
-                command=lambda: self.remove_song_from_playlist(selected_index)
-            )
+    def delete_song_from_directory(self):
+        selected_indices = self.track_listbox.curselection()
+        if not selected_indices:
+            return
 
-        # Add option to delete song from directory if no playlist is selected
-        if not self.playlist_selected:
-            right_click_menu.add_command(
-                label="Delete Song", 
-                command=lambda: self.delete_song_from_directory(selected_song)
-            )
+        confirm = messagebox.askyesno("Delete Songs", "Are you sure you want to delete the selected songs?")
+        if not confirm:
+            return
 
-        add_to_playlist_menu = tk.Menu(right_click_menu, tearoff=0)
-        # Populate the submenu with playlists
-        for playlist in self.playlists.keys():
-            add_to_playlist_menu.add_command(label=playlist, command=lambda pl=playlist: self.add_song_to_playlist(selected_song, pl))
-
-        right_click_menu.add_cascade(label="Add to Playlist", menu=add_to_playlist_menu)
-        right_click_menu.tk_popup(event.x_root, event.y_root)
-
-    def delete_song_from_directory(self, song_name):
-        # Confirm deletion
-        if messagebox.askyesno("Delete Song", f"Are you sure you want to delete '{song_name}'?"):
+        for index in selected_indices:
+            song_name = self.track_listbox.get(index)
             try:
-                # Construct the full path of the song and delete it
                 song_path = os.path.join(self.music_folder, song_name + ".mp3")
                 os.remove(song_path)
-                # Update the song list
-                self.populate_music_list()
+                # Also remove the song from the "All Songs" playlist
+                if song_path in self.playlists[self.all_songs_playlist_name]:
+                    self.playlists[self.all_songs_playlist_name].remove(song_path)
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to delete the song: {e}")
+                break
 
-    def remove_song_from_playlist(self, song_index):
+        # Refresh the list to reflect the changes
+        self.populate_music_list()
+
+    def remove_song_from_playlist(self):
         # Get the name of the currently selected playlist
         playlist_name = self.playlist_listbox.get(tk.ACTIVE)
-        if playlist_name and playlist_name in self.playlists:
-            # Remove the song from the playlist
-            del self.playlists[playlist_name][song_index]
-            self.save_playlists()
-            # Refresh the song listbox to reflect the removal
-            self.play_playlist(playlist_name)
+        if not playlist_name or playlist_name not in self.playlists:
+            return
+
+        selected_indices = self.track_listbox.curselection()
+        if not selected_indices:
+            return
+
+        for index in reversed(selected_indices):
+            if index < len(self.playlists[playlist_name]):
+                # Get the song path from the playlist
+                song_path = self.playlists[playlist_name][index]
+                song_name = os.path.basename(song_path)
+
+                try:
+                    # Move the song back to the music folder
+                    dest = os.path.join(self.music_folder, song_name)
+                    shutil.move(song_path, dest)
+                    # Remove the song from the playlist
+                    del self.playlists[playlist_name][index]
+                except Exception as e:
+                    messagebox.showerror("Error", f"Failed to move the song: {e}")
+                    break
+
+        self.save_playlists()
+        # Refresh the song listbox to reflect the changes
+        self.play_playlist(playlist_name)
 
     def create_playlist_ui(self):
         # Create a simple input dialog to get the playlist name from the user
@@ -414,6 +472,8 @@ class MusicPlayerGUI:
             # Load tracks from the selected playlist
             self.track_list = [os.path.join(self.music_folder, name) for name in self.playlists[playlist_name]]
 
+        # Refresh the song listbox with the updated playlist
+        self.track_listbox.delete(0, tk.END)
         # Repopulate the listbox with playlist tracks
         for track_path in self.track_list:
             track_name = os.path.basename(track_path)  # Get the base name of the file
