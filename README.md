@@ -24,7 +24,7 @@ npm install
 
 ## Run the application
 npm start
-
+```
 ## Usage
 Here's a quick example of how to use AudioAvenue to enhance your audio files:
 ```python
@@ -39,7 +39,7 @@ enhanced_audio = audioavenue.enhance(audio)
 
 # Save the enhanced audio
 audioavenue.save(enhanced_audio, "path/to/your/enhanced/audio/file.wav")
-```python
+```
 
 ## Contributing
 We welcome contributions from the community! If you'd like to contribute, please fork the repository and create a pull request with your changes.
