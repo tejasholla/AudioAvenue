@@ -14,10 +14,13 @@ import shutil
 class MusicPlayerGUI:
     def __init__(self, root):
         self.root = root
-        self.setup_window(root)
         self.initialize_variables()
+        self.setup_window(root)
         self.setup_ui_elements(root)
-        # Automatically display all songs on startup
+        self.load_playlists()
+        self.create_all_songs_playlist()
+        self.populate_playlist_listbox()  # Ensure this is called before trying to populate music list
+        self.populate_music_list()        # This now should have playlist_listbox available
         self.play_playlist(self.all_songs_playlist_name)
         self.update_playlists_periodically()
 
@@ -129,10 +132,6 @@ class MusicPlayerGUI:
         self.track_listbox.bind("<Double-1>", self.play_selected_song)  # Bind double-click event
         self.track_listbox.bind('<Button-3>', self.on_right_click)
 
-        # Automatically load music list if the directory exists
-        if os.path.exists(self.music_folder):
-            self.populate_music_list()
-
         # Playlist Label
         self.playlist_label = tk.Label(self.left_frame, text='Playlist', bg=self.bg_color, fg=self.header_font_color, font=header_font, anchor='w')
         self.playlist_label.pack(fill=tk.X)
@@ -140,12 +139,15 @@ class MusicPlayerGUI:
         self.playlist_listbox = tk.Listbox(self.left_frame, bg=self.bg_color, fg=self.text_color, selectbackground=self.bg_color, borderwidth=0, height=1)
         self.playlist_listbox.pack(fill=tk.BOTH, expand=True)
 
-        # Populate the playlist listbox
-        self.populate_playlist_listbox()
-
         # Bind double-click event
         self.playlist_listbox.bind("<Double-1>", self.on_playlist_double_clicked)
         self.playlist_listbox.bind('<Button-3>', self.on_playlist_right_click)
+
+        # Populate the playlist listbox
+        self.populate_playlist_listbox()
+        # Automatically load music list if the directory exists
+        if os.path.exists(self.music_folder):
+            self.populate_music_list()
 
         # Create a frame for the Load Button and Create Playlist Button
         buttons_frame = tk.Frame(self.left_frame, bg=self.bg_color)
@@ -446,41 +448,39 @@ class MusicPlayerGUI:
         if playlist_name in self.playlists:
             self.playlist_selected = True
             song_file = song_name + '.mp3'
-            # Move the song to the playlist folder
             src = os.path.join(self.music_folder, song_file)
             dest = os.path.join(self.playlist_storage_path, playlist_name, song_file)
 
             try:
-                shutil.move(src, dest)  # Use shutil.copy(src, dest) to copy instead of move
-                # Update the playlist
+                shutil.copy(src, dest)  # Change from move to copy
                 self.playlists[playlist_name].append(dest)
                 self.save_playlists()
-
-                # Reload the song list in the ListView
-                self.populate_music_list()
+                # No need to reload the music list since the original song is not moved
             except Exception as e:
-                messagebox.showerror("Error", f"Failed to move the song: {e}")
+                messagebox.showerror("Error", f"Failed to copy the song: {e}")
 
     def play_playlist(self, playlist_name):
         self.track_list = []
-        self.track_listbox.delete(0, tk.END)
-        # Load tracks 
-        if playlist_name == self.all_songs_playlist_name:
-            # Load tracks from all songs
-            self.track_list = self.playlists[self.all_songs_playlist_name]
+        self.track_listbox.delete(0, tk.END)  # Clear the list before repopulating
+    
+        # Set the playlist selection flag
+        self.playlist_selected = (playlist_name != self.all_songs_playlist_name)
+    
+        # Load tracks based on playlist
+        if self.playlist_selected:
+            self.track_list = self.playlists[playlist_name]
         else:
-            # Load tracks from the selected playlist
-            self.track_list = [os.path.join(self.music_folder, name) for name in self.playlists[playlist_name]]
-
-        # Refresh the song listbox with the updated playlist
-        self.track_listbox.delete(0, tk.END)
-        # Repopulate the listbox with playlist tracks
+            self.track_list = [os.path.join(self.music_folder, name) for name in os.listdir(self.music_folder) if name.endswith('.mp3')]
+    
+        # Insert tracks into listbox and apply color coding
         for track_path in self.track_list:
-            track_name = os.path.basename(track_path)  # Get the base name of the file
-            track_name_without_extension = os.path.splitext(track_name)[0]  # Remove the file extension
+            track_name = os.path.basename(track_path)
+            track_name_without_extension = os.path.splitext(track_name)[0]
             self.track_listbox.insert(tk.END, track_name_without_extension)
+            color = 'white' if self.playlist_selected else '#D3D3D3'
+            self.track_listbox.itemconfig(self.track_listbox.size() - 1, {'bg': color})
 
-        # If the playlist has songs, play the first song
+        # Automatically start playing the first song if the playlist has songs
         if self.track_list:
             self.current_track_index = 0
             self.play_music(0)
@@ -530,12 +530,22 @@ class MusicPlayerGUI:
         self.root.after(1000, self.check_and_play_next)
 
     def populate_music_list(self, search_term=''):
-        self.track_list = [f for f in os.listdir(self.music_folder) if f.endswith('.mp3')]
+        all_songs = [f for f in os.listdir(self.music_folder) if f.endswith('.mp3')]
         self.track_listbox.delete(0, tk.END)
-        for track in self.track_list:
+    
+        # Create a set of all song paths in all playlists
+        playlist_songs = set()
+        for songs in self.playlists.values():
+            playlist_songs.update(songs)
+    
+        for track in all_songs:
             track_name_without_extension = os.path.splitext(track)[0]
-            if search_term in track_name_without_extension.lower():
+            song_path = os.path.join(self.music_folder, track)
+            if search_term.lower() in track_name_without_extension.lower():
+                # Check if the song is in any playlist
+                color = 'white' if song_path in playlist_songs else '#D3D3D3'  # Use a more noticeable color for differentiation
                 self.track_listbox.insert(tk.END, track_name_without_extension)
+                self.track_listbox.itemconfig(self.track_listbox.size() - 1, {'bg': color})
 
     def extract_album_art(self, track_path):
         try:
