@@ -40,6 +40,8 @@ enhanced_audio = audioavenue.enhance(audio)
 # Save the enhanced audio
 audioavenue.save(enhanced_audio, "path/to/your/enhanced/audio/file.wav")
 ```
+## Activity
+![Alt](https://repobeats.axiom.co/api/embed/0b5a108004fef5a8c736c8a249ca131e9d8764e2.svg "Repobeats analytics image")
 
 ## Contributing
 We welcome contributions from the community! If you'd like to contribute, please fork the repository and create a pull request with your changes.
